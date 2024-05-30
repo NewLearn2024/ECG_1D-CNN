@@ -1,21 +1,18 @@
 import os
 import csv
-import matplotlib.pyplot as plt
 import pywt
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 
-# Function to denoise data
 def denoise(data):
     w = pywt.Wavelet('sym4')
     maxlev = pywt.dwt_max_level(len(data), w.dec_len)
-    threshold = 0.04  # Threshold for filtering
+    threshold = 0.04
 
     coeffs = pywt.wavedec(data, 'sym4', level=maxlev)
     for i in range(1, len(coeffs)):
@@ -30,7 +27,6 @@ def denoise(data):
 class ECGDataset(Dataset):
     def __init__(self, data_dir, window_size=180, max_count=10000):
         self.data_dir = data_dir
-        print(data_dir)
         self.window_size = window_size
         self.max_count = max_count
         self.classes = ['N', 'L', 'R', 'A', 'V']
@@ -71,13 +67,12 @@ class ECGDataset(Dataset):
             signals = denoise(signals)
             signals = stats.zscore(signals)
 
-            # Read annotations: R position and Arrhythmia class
             with open(annotations[r], 'r') as fileID:
                 data = fileID.readlines()
-                for d in range(1, len(data)):  # 0 index is Chart Head
+                for d in range(1, len(data)):
                     splitted = list(filter(None, data[d].split(' ')))
-                    pos = int(splitted[1])  # Sample ID
-                    arrhythmia_type = splitted[2]  # Type
+                    pos = int(splitted[1])
+                    arrhythmia_type = splitted[2]
                     if arrhythmia_type in self.classes:
                         arrhythmia_index = self.classes.index(arrhythmia_type)
                         self.count_classes[arrhythmia_index] += 1

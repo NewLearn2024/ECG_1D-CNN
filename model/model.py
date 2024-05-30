@@ -10,14 +10,14 @@ class ECGModel(BaseModel):
         self.conv1 = nn.Conv1d(1, 16, kernel_size=5, stride=1)
         self.conv2 = nn.Conv1d(16, 32, kernel_size=5, stride=1)
 
-        self.fc1 = nn.Linear(32 * 87, 120)  # Corrected input size
+        self.fc1 = nn.Linear(32 * 87, 120)
         self.fc2 = nn.Linear(120, num_classes)
 
     def forward(self, x):
-        x = x.permute(0, 2, 1)  # Change to [batch_size, 1, sequence_length]
+        x = x.permute(0, 2, 1)
         x = F.relu(F.max_pool1d(self.conv1(x), 2))
         x = F.relu(F.max_pool1d(self.conv2(x), 2))
-        x = x.view(x.size(0), -1)  # Flatten the tensor for fully connected layers
+        x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, training=self.training)
         x = self.fc2(x)
