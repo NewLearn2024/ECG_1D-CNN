@@ -9,10 +9,10 @@
     "data_loader": {
         "type": "ECGDataLoader",
         "args":{
-            "data_dir": "dataset/mitdb/1.0.0",
+            "data_dir": "dataset/mitbih",
             "batch_size": 32,
             "shuffle": true,
-            "validation_split": 0.1,
+            "validation_split": 0.2,
             "num_workers": 2
         }
     },
@@ -24,7 +24,7 @@
             "amsgrad": true
         }
     },
-    "loss": "bce_loss",
+    "loss": "ce_loss",
     "metrics": [
         "accuracy", "top_k_acc"
     ],

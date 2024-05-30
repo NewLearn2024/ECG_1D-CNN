@@ -7,6 +7,13 @@ from base import BaseTrainer
 from utils import inf_loop, MetricTracker
 
 
+def visualize_data(data, writer, tag="input", nrow=8, normalize=True):
+    # Assuming data is [batch_size, channels, sequence_length]
+    data = data.unsqueeze(1)  # Add a dimension to make it [batch_size, 1, channels, sequence_length]
+    grid = make_grid(data, nrow=nrow, normalize=normalize)
+    writer.add_image(tag, grid)
+
+
 class Trainer(BaseTrainer):
     """
     Trainer class
@@ -60,7 +67,7 @@ class Trainer(BaseTrainer):
                     epoch,
                     self._progress(batch_idx),
                     loss.item()))
-                self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
+                visualize_data(data.cpu(), self.writer, tag='input')
 
             if batch_idx == self.len_epoch:
                 break
@@ -94,7 +101,7 @@ class Trainer(BaseTrainer):
                 self.valid_metrics.update('loss', loss.item())
                 for met in self.metric_ftns:
                     self.valid_metrics.update(met.__name__, met(output, target))
-                self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
+                visualize_data(data.cpu(), self.writer, tag='input')
 
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():

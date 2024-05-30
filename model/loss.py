@@ -1,6 +1,6 @@
-import torch
+import torch.nn as nn
 
 
-def bce_loss(output, target):
-    loss_fn = torch.nn.BCELoss()
-    return loss_fn(output, target)
+def ce_loss(output, target):
+    criterion = nn.CrossEntropyLoss()
+    return criterion(output, target)
