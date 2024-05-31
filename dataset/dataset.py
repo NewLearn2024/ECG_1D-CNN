@@ -4,6 +4,7 @@ import pywt
 import numpy as np
 import pandas as pd
 from scipy import stats
+import matplotlib.pyplot as plt
 from sklearn.utils import resample
 import torch
 from torch.utils.data import Dataset
@@ -19,13 +20,11 @@ def denoise(data):
         coeffs[i] = pywt.threshold(coeffs[i], threshold * max(coeffs[i]))
 
     datarec = pywt.waverec(coeffs, 'sym4')
-
     return datarec
 
 
-# PyTorch Dataset
 class ECGDataset(Dataset):
-    def __init__(self, data_dir, window_size=180, max_count=10000):
+    def __init__(self, data_dir, window_size=93, max_count=10000):
         self.data_dir = data_dir
         self.window_size = window_size
         self.max_count = max_count
@@ -34,13 +33,15 @@ class ECGDataset(Dataset):
         self.count_classes = [0] * self.n_classes
 
         self.X, self.y = self.load_data()
+        # self.plot_class_distribution(self.y, title="Initial Class Distribution")
         self.X, self.y = self.balance_classes(self.X, self.y)
+        # self.plot_class_distribution(self.y, title="Balanced Class Distribution")
+        print(self.X.shape, self.y.shape)
 
     def load_data(self):
         X = []
         y = []
 
-        # Read files
         records, annotations = [], []
         for root, _, files in os.walk(self.data_dir):
             for f in files:
@@ -64,8 +65,32 @@ class ECGDataset(Dataset):
                     if row_index > 0:
                         signals.append(int(row[1]))
 
+            # # 시각화: 원본 신호
+            # if r == 0:
+            #     plt.figure(figsize=(10, 2))
+            #     plt.plot(signals[:700], label='Original Signal')
+            #     plt.legend()
+            #     plt.show()
+
+            # noise 제거
             signals = denoise(signals)
+
+            # # 시각화: 잡음 제거 후 신호
+            # if r == 0:
+            #     plt.figure(figsize=(10, 2))
+            #     plt.plot(signals[:700], label='Denoised Signal')
+            #     plt.legend()
+            #     plt.show()
+
+            # 정규화
             signals = stats.zscore(signals)
+
+            # # 시각화: 정규화 후 신호
+            # if r == 0:
+            #     plt.figure(figsize=(10, 2))
+            #     plt.plot(signals[:700], label='Normalized Signal')
+            #     plt.legend()
+            #     plt.show()
 
             with open(annotations[r], 'r') as fileID:
                 data = fileID.readlines()
@@ -77,9 +102,17 @@ class ECGDataset(Dataset):
                         arrhythmia_index = self.classes.index(arrhythmia_type)
                         self.count_classes[arrhythmia_index] += 1
                         if self.window_size <= pos < (len(signals) - self.window_size):
-                            beat = signals[pos - self.window_size:pos + self.window_size]
-                            X.append(beat)
+                            start_idx = pos - self.window_size
+                            end_idx = pos + self.window_size + 1
+                            X.append(signals[start_idx:end_idx])
                             y.append(arrhythmia_index)
+
+                            # # 시각화: R-peak 중심의 비트
+                            # if r == 0:
+                            #     plt.figure(figsize=(10, 2))
+                            #     plt.plot(beat, label='Beat Centered at R-peak')
+                            #     plt.legend()
+                            #     plt.show()
 
         return np.array(X), np.array(y)
 
@@ -98,8 +131,20 @@ class ECGDataset(Dataset):
 
         return X_balanced, y_balanced
 
+    def plot_class_distribution(self, y, title="Class Distribution"):
+        plt.figure(figsize=(8, 6))
+        values, counts = np.unique(y, return_counts=True)
+        labels = [self.classes[v] for v in values]
+        plt.pie(counts, labels=labels, autopct='%1.1f%%', startangle=90)
+        plt.title(title)
+        plt.axis('equal')
+        plt.show()
+
     def __len__(self):
         return len(self.X)
 
     def __getitem__(self, idx):
-        return torch.tensor(self.X[idx], dtype=torch.float32).unsqueeze(1), torch.tensor(self.y[idx], dtype=torch.long)
+        x = torch.tensor(self.X[idx], dtype=torch.float32).unsqueeze(0)
+        y = torch.tensor(self.y[idx], dtype=torch.long)
+        return x, y
+
